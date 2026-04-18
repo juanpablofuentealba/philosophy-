@@ -1,0 +1,46 @@
+name: Build Smartlink M01 Driver
+
+on:
+  push:
+    branches: [ "master", "smartlinktechnology-m01-driver-f2668" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+    
+    steps:
+      - name: Update system and install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel git clang llvm make linux-headers
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build kernel module
+        run: |
+          make LLVM=1
+
+      - name: Verify module was built
+        run: |
+          if [ -f smartlink_m01.ko ]; then
+            echo "Module built successfully"
+            modinfo smartlink_m01.ko
+          else
+            echo "Module not found"
+            exit 1
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartlink-m01-driver
+          path: |
+            smartlink_m01.ko
+            Makefile
